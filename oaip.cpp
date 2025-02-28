@@ -5,18 +5,38 @@
 #include<fstream>
 #include <Windows.h>
 #include<iomanip> 
-#include <cstdlib>;
+#include <cstdlib>
 
 using namespace std;
 
 void enterWelcomeText();
 
-void displayRegistrationRequests() {
-    ifstream file("adminFiles.txt");
-    if (!file.is_open()) {
-        cout << "Ошибка открытия файла с заявками!" << endl;
+void copyFileContent(const string& sourceFile, const string& destinationFile) {
+    ifstream inputFile(sourceFile);
+    ofstream outputFile(destinationFile, ios::app);
+
+    if (!inputFile.is_open()) {
+        cout << "Ошибка открытия исходного файла!" << endl;
         return;
     }
+    if (!outputFile.is_open()) {
+        cout << "Ошибка открытия файла для записи!" << endl;
+        return;
+    }
+
+    string line;
+    while (getline(inputFile, line)) {
+        outputFile << line << " 0" << endl;
+    }
+
+    inputFile.close();
+    outputFile.close();
+    ofstream file("adminFiles.txt", ios::trunc);
+    file.close();
+}
+
+void displayRequests() {
+    ifstream file("adminFiles.txt");
 
     cout << "Заявки на регистрацию:" << endl;
     cout << left << setw(20) << "Логин" << setw(30) << "Пароль" << endl;
@@ -28,9 +48,45 @@ void displayRegistrationRequests() {
     }
 
     file.close();
+
+    int acceptRequests;
+    cout << "\nВыберите действие:\n\n1 - принять все\n\n2 - отклонить все";
+    cin >> acceptRequests;
+    while (acceptRequests != 1 && acceptRequests != 2) {
+        cout << "\nПожалуйста, повторите попытку\n";
+        cin >> acceptRequests;
+    }
+    switch (acceptRequests) {
+    case 1:
+        copyFileContent("adminFiles.txt", "users.txt");
+        break;
+    case 2:
+        ofstream file("adminFiles.txt", ios::trunc);
+        file.close();
+        break;
+    }
 }
 
-void workWithUsers() {
+struct User {
+    string login;
+    string password;
+    int role; // 1 - админ, 0 - пользователь
+};
+
+void displayUsers() {
+    ifstream file("users.txt");
+    setlocale(LC_ALL, "Russian");
+
+    cout << "Все пользователи:" << endl;
+    cout << left << setw(20) << "Логин" << setw(30) << "Пароль" << setw(20) << "Роль" << endl;
+    cout << string(70, '-') << endl;
+
+    User allUsers;
+    while (file >> allUsers.login >> allUsers.password >> allUsers.role) {
+        cout << setw(20) << allUsers.login << setw(30) << allUsers.password << setw(20) << allUsers.role << endl;
+    }
+
+    file.close();
 
 }
 
@@ -47,10 +103,6 @@ void displayProducts() {
 
     ifstream file("goods.txt");
     setlocale(LC_ALL, "");
-    if (!file.is_open()) {
-        cout << "Ошибка открытия файла с товарами!" << endl;
-        return;
-    }
 
     // Выводим заголовки для таблицы
     cout << left << setw(30) << "Название" << setw(20) << "Бренд" << setw(10) << "Вес (кг)"
@@ -70,11 +122,7 @@ void displayProducts() {
     file.close();
 }
 
-struct User {
-    string login;
-    string password;
-    int role; // 1 - админ, 0 - пользователь
-};
+
 
 void adminPanel() {
     system("cls");
@@ -86,16 +134,17 @@ void adminPanel() {
     cout << "\n\n4 - Выход\n";
 
     cin >> adminChoise;
-    while (adminChoise != 1 && adminChoise != 2 && adminChoise != 3 && adminChoise != 4) {
+    while (adminChoise < 1 || adminChoise > 4) {
         cout << "\nНекорректный запрос. Повторите попытку";
         cin >> adminChoise;
     }
 
     switch (adminChoise) {
     case 1:
+        displayUsers();
         break;
     case 2:
-        displayRegistrationRequests();
+        displayRequests();
         break;
     case 3:
         displayProducts();
@@ -109,22 +158,49 @@ void adminPanel() {
 }
 
 void userPanel() {
-
     system("cls");
+    int userChoise;
     cout << "Добро пожаловать, пользователь!\n Доступны следующие действия: \n";
     cout << "\n\n1 - Поиск определенного товара по имени";
     cout << "\n\n2 - Поиск определенного товара по бренду";
     cout << "\n\n3 - Помощь с выбором товара по целям";
+    cout << "\n\n4 - Выход\n";
+
+    cin >> userChoise;
+    while (userChoise < 1 || userChoise > 4) {
+        cout << "\nНекорректный запрос. Повторите попытку";
+        cin >> userChoise;
+    }
+
+    switch (userChoise) {
+    case 1:
+
+        break;
+    case 2:
+
+        break;
+    case 3:
+
+        break;
+    case 4:
+        system("cls");
+
+        break;
+    }
 
 }
 
-void addToAdminFiles() {
-    ofstream file("adminFiles.txt");
-
+void addToAdminFiles(const string& login, const string& password) {
+    ofstream file("adminFiles.txt", ios::app); // Открываем файл в режиме добавления
+    if (!file.is_open()) {
+        cout << "Ошибка открытия файла для записи!" << endl;
+        return;
+    }
+    file << login << " " << password << endl;
+    file.close();
 }
 
-string login, password;
-int role;
+//string login, password;
 
 void registration() {
     User userReg;
@@ -140,7 +216,7 @@ void registration() {
         cout << "\nПовтор пароля: "; cin >> password_check;
     }
 
-    addToAdminFiles();
+    addToAdminFiles(login, password);
     cout << "Заявка на авторизацию отправлена.\nОжидайте одобрения администратора";
     Sleep(2000);
     //тут надо намутить, чтобы администратору в отдельный файлик отправлялась вся эта лабуда
@@ -192,11 +268,6 @@ void getHiddenInput(string& input) {
 
 bool authorizationCheck(const User& currentUser) {
     ifstream file("users.txt");
-
-    /*if (!file.is_open()) {
-        cout << "Ошибка открытия файла users.txt" << endl;
-        return false;
-    }*/
 
     User user;
 
@@ -258,6 +329,8 @@ void authorization() {
 
 void main() {
     setlocale(LC_ALL, "Russian");
+    SetConsoleOutputCP(1251);
+    SetConsoleCP(1251);
     enterWelcomeText();
     authorization();
 }
